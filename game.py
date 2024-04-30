@@ -88,6 +88,7 @@ class Game:
             pose_landmarks_proto,
             solutions.pose.POSE_CONNECTIONS,
             solutions.drawing_styles.get_default_pose_landmarks_style())
+        print(pose_landmarks_list)
         return annotated_image
 
     def run(self):
