@@ -68,6 +68,8 @@ class Game:
 
         # Load video
         self.video = cv2.VideoCapture(0)
+        self.pull_up_count = 0
+        pull_up_valid = True
 
     
     def draw_landmarks_on_image(self, rgb_image, detection_result):
@@ -77,7 +79,6 @@ class Game:
         # Loop through the detected poses to visualize.
         for idx in range(len(pose_landmarks_list)):
             pose_landmarks = pose_landmarks_list[idx]
-
             # Draw the pose landmarks.
             pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
             pose_landmarks_proto.landmark.extend([
@@ -88,7 +89,13 @@ class Game:
             pose_landmarks_proto,
             solutions.pose.POSE_CONNECTIONS,
             solutions.drawing_styles.get_default_pose_landmarks_style())
-        print(pose_landmarks_list)
+            
+            #Tracking whether the pull up is valid
+            
+            if((pose_landmarks[12].y + .10 > pose_landmarks[11].y) or (pose_landmarks[12].y + -.10 > pose_landmarks[11].y)):
+                self.pull_up_valid = False
+            if((pose_landmarks[15].y < pose_landmarks[7].y) and (pose_landmarks[16].y < pose_landmarks[8].y) and self.pull_up_valid):
+                self.pull_up_count += 1
         return annotated_image
 
     def run(self):
