@@ -68,9 +68,31 @@ class Game:
 
         # Load video
         self.video = cv2.VideoCapture(0)
+        
+        #Conditions of pull-up
         self.pull_up_count = 0
-        pull_up_valid = True
+        self.pull_up_valid = True
+        self.pull_up_started = False
 
+    #Add to the pullup count variable if it is valid
+    def add_to_pull_up_count(self, pose_landmarks):
+        if((pose_landmarks[15].y > pose_landmarks[7].y) and (pose_landmarks[16].y > pose_landmarks[8].y) and self.pull_up_valid):
+            self.pull_up_count += 1
+            self.pull_up_started = False
+            print(self.pull_up_count)
+    #Boolean when the pull up starts
+    def when_pull_up_starts(self, pose_landmarks):
+        if((pose_landmarks[16].y + 0.10 < pose_landmarks[6].y) and (pose_landmarks[15].y + 0.10 < pose_landmarks[3].y)):
+            self.pull_up_started = True
+            self.pull_up_valid = True
+    #Boolean if kicking feet
+    def decide_kicking_feet(self, pose_landmarks):
+        if(self.pull_up_started and )
+    #Boolean is pull up valid
+    def decide_pull_up_valid(self, pose_landmarks):
+        if((abs(pose_landmarks[12].y - pose_landmarks[11].y) > 0.10)):
+                self.pull_up_valid = False
+    
     
     def draw_landmarks_on_image(self, rgb_image, detection_result):
         pose_landmarks_list = detection_result.pose_landmarks
@@ -90,12 +112,13 @@ class Game:
             solutions.pose.POSE_CONNECTIONS,
             solutions.drawing_styles.get_default_pose_landmarks_style())
             
-            #Tracking whether the pull up is valid
             
-            if((pose_landmarks[12].y + .10 > pose_landmarks[11].y) or (pose_landmarks[12].y + -.10 > pose_landmarks[11].y)):
-                self.pull_up_valid = False
-            if((pose_landmarks[15].y < pose_landmarks[7].y) and (pose_landmarks[16].y < pose_landmarks[8].y) and self.pull_up_valid):
-                self.pull_up_count += 1
+
+            #Check and add
+            self.when_pull_up_starts(pose_landmarks)
+            self.decide_pull_up_valid(pose_landmarks)
+            if(self.pull_up_started and self.pull_up_valid):
+                self.add_to_pull_up_count(pose_landmarks)
         return annotated_image
 
     def run(self):
