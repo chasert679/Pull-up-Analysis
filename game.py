@@ -73,7 +73,8 @@ class Game:
         self.pull_up_count = 0
         self.pull_up_valid = True
         self.pull_up_started = False
-
+        self.feet_kicking = False
+        self.swaying = False
     #Add to the pullup count variable if it is valid
     def add_to_pull_up_count(self, pose_landmarks):
         if((pose_landmarks[15].y > pose_landmarks[7].y) and (pose_landmarks[16].y > pose_landmarks[8].y) and self.pull_up_valid):
@@ -82,18 +83,45 @@ class Game:
             print(self.pull_up_count)
     #Boolean when the pull up starts
     def when_pull_up_starts(self, pose_landmarks):
-        if((pose_landmarks[16].y + 0.10 < pose_landmarks[6].y) and (pose_landmarks[15].y + 0.10 < pose_landmarks[3].y)):
+        if((pose_landmarks[16].y < pose_landmarks[6].y) and (pose_landmarks[15].y< pose_landmarks[3].y)):
             self.pull_up_started = True
-            self.pull_up_valid = True
     #Boolean if kicking feet
     def decide_kicking_feet(self, pose_landmarks):
-        if(self.pull_up_started and )
+        if(self.pull_up_started and ((abs(pose_landmarks[28].z - pose_landmarks[24].z) > 0.1) or (abs(pose_landmarks[27].z - pose_landmarks[23].z) > 0.1))):
+            self.feet_kicking = True
+        else:
+            self.feet_kicking = False
+    #Boolean if swaying
+    def decide_swaying(self, pose_landmarks):
+        if((abs(pose_landmarks[12].y - pose_landmarks[11].y) > 0.05)):
+            self.swaying = True
+        else:
+            self.swaying = False
     #Boolean is pull up valid
     def decide_pull_up_valid(self, pose_landmarks):
-        if((abs(pose_landmarks[12].y - pose_landmarks[11].y) > 0.10)):
-                self.pull_up_valid = False
+        if(self.swaying or self.feet_kicking):
+            self.pull_up_valid = False
+            return False
+        else:
+            self.pull_up_valid = True
+            return True
     
-    
+    def get_pose_landmarks(self, detection_result):
+        pose_landmarks_list = detection_result.pose_landmarks
+        # annotated_image = np.copy(rgb_image)
+
+        # Loop through the detected poses to visualize.
+        for idx in range(len(pose_landmarks_list)):
+            pose_landmarks = pose_landmarks_list[idx]
+            # Draw the pose landmarks.
+            pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+            pose_landmarks_proto.landmark.extend([
+            landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
+            ])
+
+            return pose_landmarks
+        return None
+
     def draw_landmarks_on_image(self, rgb_image, detection_result):
         pose_landmarks_list = detection_result.pose_landmarks
         annotated_image = np.copy(rgb_image)
@@ -116,8 +144,7 @@ class Game:
 
             #Check and add
             self.when_pull_up_starts(pose_landmarks)
-            self.decide_pull_up_valid(pose_landmarks)
-            if(self.pull_up_started and self.pull_up_valid):
+            if(self.pull_up_started and self.decide_pull_up_valid(pose_landmarks)):
                 self.add_to_pull_up_count(pose_landmarks)
         return annotated_image
 
@@ -140,9 +167,36 @@ class Game:
             # Convert the image to a readable format and find the hands
             to_detect = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
             results = self.detector.detect(to_detect)
-
             image = self.draw_landmarks_on_image(image, results)
+
+            cv2.putText(image,
+                        str(self.pull_up_count),
+                        (50, 80),
+                        fontFace=cv2.FONT_HERSHEY_COMPLEX,
+                        fontScale=2,
+                        color=GREEN,
+                        thickness=3)
             
+            #Making green or red circle on screen
+            
+            pose_landmarks = self.get_pose_landmarks(results)
+            if pose_landmarks:
+                self.decide_kicking_feet(pose_landmarks)
+                self.decide_swaying(pose_landmarks)
+
+                if(self.decide_pull_up_valid(pose_landmarks)):
+                    cv2.circle(image,
+                            (1100, 360),
+                            20,
+                            GREEN,
+                            35)
+                if(self.decide_pull_up_valid(pose_landmarks) == False):
+                    cv2.circle(image,
+                            (1100, 360),
+                            20,
+                            RED,
+                            35)
+                
             # Change the color of the frame back
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             cv2.imshow('Pose Tracking', image)
